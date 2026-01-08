@@ -1,0 +1,7 @@
+{
+  "name": "Magazzino GA VR",
+  "description": "A professional warehouse inventory dashboard with role-based access control using Supabase and AI-powered insights using Google Gemini.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

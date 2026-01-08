@@ -18,6 +18,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const initAuth = async () => {
+      // 1. Controlla sessione Supabase reale
       if (isConfigured) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
@@ -28,12 +29,29 @@ const App: React.FC = () => {
             role: (profile?.role as UserRole) || 'viewer'
           });
         }
+      } 
+      // 2. Controlla sessione Demo locale se Supabase non è configurato
+      else {
+        const savedDemo = localStorage.getItem('ga_demo_session');
+        if (savedDemo) {
+          try {
+            const userData = JSON.parse(savedDemo);
+            setCurrentUser({
+              id: 'demo-user',
+              email: userData.email,
+              role: userData.role
+            });
+          } catch (e) {
+            localStorage.removeItem('ga_demo_session');
+          }
+        }
       }
       setLoading(false);
     };
 
     initAuth();
 
+    // Listener per cambiamenti di stato (solo per Supabase reale)
     if (isConfigured) {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
         if (session?.user) {
@@ -51,31 +69,36 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleDemoLogin = async (email: string) => {
+  const handleLoginSuccess = async (email: string) => {
     const role: UserRole = email.includes('admin') ? 'admin' : 'operator';
     setCurrentUser({
-      id: 'demo-user',
+      id: isConfigured ? 'real-user' : 'demo-user',
       email: email,
       role: role
     });
   };
 
   const handleLogout = async () => {
-    if (isConfigured) await supabase.auth.signOut();
+    if (isConfigured) {
+      await supabase.auth.signOut();
+    } else {
+      localStorage.removeItem('ga_demo_session');
+    }
     setCurrentUser(null);
+    setActiveTab('dashboard');
   };
 
   if (loading) return (
     <div className="fixed inset-0 flex items-center justify-center bg-slate-50">
       <div className="flex flex-col items-center gap-4">
         <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-slate-500 font-medium tracking-tight tracking-widest uppercase text-[10px] font-black">Magazzino GA VR</p>
+        <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">Magazzino GA VR</p>
       </div>
     </div>
   );
 
   if (!currentUser) {
-    return <Auth onLoginSuccess={handleDemoLogin} />;
+    return <Auth onLoginSuccess={handleLoginSuccess} />;
   }
 
   const renderContent = () => {

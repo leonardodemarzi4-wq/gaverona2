@@ -52,7 +52,7 @@ export const mockApi = {
       category: item.category || 'Generale',
       warehouse: item.warehouse || 'Principale',
       updated_at: new Date().toISOString(),
-      min_stock: item.min_stock || 10
+      min_stock: item.min_stock || 0
     };
     MOCK_INVENTORY.push(newItem);
     return { data: newItem, error: null };
@@ -70,6 +70,11 @@ export const mockApi = {
       MOCK_INVENTORY[index] = { ...MOCK_INVENTORY[index], ...updates };
     }
     return { data: MOCK_INVENTORY[index], error: null };
+  },
+  deleteItem: async (itemId: string) => {
+    await new Promise(r => setTimeout(r, 400));
+    MOCK_INVENTORY = MOCK_INVENTORY.filter(i => i.id !== itemId);
+    return { error: null };
   },
   getProfile: async (id: string) => {
     return { data: { id, role: 'admin', full_name: 'Admin Magazzino' }, error: null };

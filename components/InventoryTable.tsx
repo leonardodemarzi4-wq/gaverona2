@@ -5,7 +5,6 @@ import { mockApi } from '../services/supabaseClient';
 import AIInsights from './AIInsights';
 
 interface InventoryTableProps {
-  // Warehouse is now optional to allow "Stock Totale" (global view) as seen in App.tsx
   warehouse?: WarehouseName;
   currentUser: AuthUser;
 }
@@ -15,6 +14,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ warehouse, currentUser 
   const [loading, setLoading] = useState(true);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [updateLoading, setUpdateLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const canEdit = currentUser.role === 'admin' || currentUser.role === 'operator';
 
@@ -45,12 +45,24 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ warehouse, currentUser 
     setUpdateLoading(false);
   };
 
-  // Adjusted loading text to handle undefined warehouse
+  const handleDeleteItem = async () => {
+    if (!editingItem || !canEdit) return;
+    if (!window.confirm(`Sei sicuro di voler eliminare definitivamente "${editingItem.name}"?`)) return;
+
+    setDeleteLoading(true);
+    const { error } = await mockApi.deleteItem(editingItem.id);
+    
+    if (!error) {
+      setItems(prev => prev.filter(i => i.id !== editingItem.id));
+      setEditingItem(null);
+    }
+    setDeleteLoading(false);
+  };
+
   if (loading) return <div className="p-10 text-center animate-pulse uppercase font-black text-slate-300">Caricamento Stock {warehouse || 'Globale'}...</div>;
 
   return (
     <div className="space-y-4">
-      {/* Integrated AIInsights to provide strategic tips for the current inventory view */}
       <AIInsights items={items} />
 
       <div className="flex justify-between items-center px-1">
@@ -59,40 +71,46 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ warehouse, currentUser 
       </div>
 
       <div className="grid gap-3">
-        {items.map((item) => {
-          const isLow = item.quantity < (item.min_stock || 15);
-          return (
-            <div 
-              key={item.id} 
-              onClick={() => canEdit && setEditingItem(item)}
-              className={`bg-white p-4 rounded-2xl border shadow-sm transition-all cursor-pointer hover:shadow-md ${isLow ? 'border-orange-200' : 'border-slate-200'}`}
-            >
-              <div className="flex justify-between items-start">
-                <div className="min-w-0 pr-4">
-                  <h4 className={`font-black text-sm truncate uppercase tracking-tight ${isLow ? 'text-orange-700' : 'text-slate-900'}`}>{item.name}</h4>
-                  <p className="text-[10px] text-slate-400 font-mono tracking-widest">SKU: {item.sku}</p>
-                </div>
-                <div className="shrink-0 text-right">
-                   <div className={`text-lg font-black leading-none ${isLow ? 'text-orange-600' : 'text-slate-700'}`}>
-                    {item.quantity} <span className="text-[10px] text-slate-400 font-medium">pz</span>
-                   </div>
-                   <p className="text-[9px] text-slate-400 mt-0.5">Scorta min: {item.min_stock || 15}</p>
+        {items.length === 0 ? (
+          <div className="p-12 text-center bg-white border border-dashed border-slate-200 rounded-[32px]">
+             <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Nessun prodotto trovato</p>
+          </div>
+        ) : (
+          items.map((item) => {
+            const isLow = item.quantity < (item.min_stock || 15);
+            return (
+              <div 
+                key={item.id} 
+                onClick={() => canEdit && setEditingItem(item)}
+                className={`bg-white p-4 rounded-2xl border shadow-sm transition-all cursor-pointer hover:shadow-md ${isLow ? 'border-orange-200' : 'border-slate-200'}`}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="min-w-0 pr-4">
+                    <h4 className={`font-black text-sm truncate uppercase tracking-tight ${isLow ? 'text-orange-700' : 'text-slate-900'}`}>{item.name}</h4>
+                    <p className="text-[10px] text-slate-400 font-mono tracking-widest">SKU: {item.sku}</p>
+                    {warehouse === undefined && <p className="text-[8px] font-black text-blue-600 uppercase mt-1">Mag: {item.warehouse}</p>}
+                  </div>
+                  <div className="shrink-0 text-right">
+                     <div className={`text-lg font-black leading-none ${isLow ? 'text-orange-600' : 'text-slate-700'}`}>
+                      {item.quantity} <span className="text-[10px] text-slate-400 font-medium">pz</span>
+                     </div>
+                     <p className="text-[9px] text-slate-400 mt-0.5">Scorta min: {item.min_stock || 0}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
 
-      {/* Edit Modal */}
       {editingItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
           <form 
             onSubmit={handleUpdateItem}
-            className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+            className="bg-white w-full max-w-sm rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
           >
             <div className="bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="font-black text-slate-900 uppercase text-sm tracking-widest">Modifica Prodotto</h3>
+              <h3 className="font-black text-slate-900 uppercase text-sm tracking-widest">Dettaglio SKU</h3>
               <button type="button" onClick={() => setEditingItem(null)} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
             
@@ -128,21 +146,32 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ warehouse, currentUser 
               </div>
             </div>
 
-            <div className="p-6 bg-slate-50 flex gap-3">
-              <button 
-                type="button" 
-                onClick={() => setEditingItem(null)}
-                className="flex-1 bg-white border border-slate-200 py-3 rounded-xl font-bold text-slate-500 text-xs uppercase"
-              >
-                Annulla
-              </button>
+            <div className="p-6 bg-slate-50 flex flex-col gap-3">
               <button 
                 type="submit" 
-                disabled={updateLoading}
-                className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-black text-xs uppercase shadow-lg shadow-blue-100 disabled:opacity-50"
+                disabled={updateLoading || deleteLoading}
+                className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-xs uppercase shadow-lg shadow-blue-100 disabled:opacity-50"
               >
                 {updateLoading ? 'Salvataggio...' : 'Salva Modifiche'}
               </button>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setEditingItem(null)}
+                  className="bg-white border border-slate-200 py-3 rounded-2xl font-bold text-slate-500 text-xs uppercase"
+                >
+                  Indietro
+                </button>
+                <button 
+                  type="button" 
+                  onClick={handleDeleteItem}
+                  disabled={deleteLoading || updateLoading}
+                  className="bg-red-50 text-red-600 border border-red-100 py-3 rounded-2xl font-black text-xs uppercase disabled:opacity-50"
+                >
+                  {deleteLoading ? 'Eliminazione...' : 'Elimina SKU'}
+                </button>
+              </div>
             </div>
           </form>
         </div>

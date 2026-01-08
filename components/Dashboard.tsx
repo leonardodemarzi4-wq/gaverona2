@@ -20,13 +20,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToOrdini }) => {
   const [isScanningSku, setIsScanningSku] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Form State
+  // Form State (Changed quantity and min_stock to strings for empty initial display)
   const [newProduct, setNewProduct] = useState({
     name: '',
     sku: '',
     warehouse: 'Principale' as WarehouseName,
-    quantity: 0,
-    min_stock: 10
+    quantity: '' as any,
+    min_stock: '' as any
   });
 
   const fetchData = async () => {
@@ -43,7 +43,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToOrdini }) => {
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateLoading(true);
-    await mockApi.createItem(newProduct);
+    
+    // Convert string inputs back to numbers
+    const payload = {
+      ...newProduct,
+      quantity: parseInt(newProduct.quantity) || 0,
+      min_stock: parseInt(newProduct.min_stock) || 0
+    };
+
+    await mockApi.createItem(payload);
     await fetchData();
     setCreateLoading(false);
     setIsCreateModalOpen(false);
@@ -51,8 +59,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToOrdini }) => {
       name: '',
       sku: '',
       warehouse: 'Principale',
-      quantity: 0,
-      min_stock: 10
+      quantity: '',
+      min_stock: ''
     });
   };
 
@@ -145,19 +153,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToOrdini }) => {
                     <p className="text-[10px] font-black uppercase tracking-widest">Inventario Vuoto</p>
                   </div>
                 ) : (
-                  [1, 2, 3].map(i => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-2xl border border-slate-100">
+                  items.slice(0, 3).map((item, i) => (
+                    <div key={item.id} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-2xl border border-slate-100">
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 ${i % 2 === 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'} rounded-xl flex items-center justify-center`}>
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={i % 2 === 0 ? "M12 4v16m8-8H4" : "M20 12H4"} /></svg>
                         </div>
                         <div>
-                          <p className="text-[10px] font-black text-slate-900 uppercase truncate max-w-[140px]">Movimento #{200+i}</p>
-                          <p className="text-[9px] text-slate-400 font-bold uppercase">Log {['Nicola', 'Marco', 'Mirko'][i%3]}</p>
+                          <p className="text-[10px] font-black text-slate-900 uppercase truncate max-w-[140px]">{item.name}</p>
+                          <p className="text-[9px] text-slate-400 font-bold uppercase">Log {item.warehouse}</p>
                         </div>
                       </div>
                       <span className={`text-[11px] font-black ${i % 2 === 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {i % 2 === 0 ? '+' : '-'}{i*2+1} pz
+                        {i % 2 === 0 ? '+' : ''}{item.quantity} pz
                       </span>
                     </div>
                   ))
@@ -311,19 +319,23 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToOrdini }) => {
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Giacenza</label>
                   <input 
+                    required
                     type="number" 
                     value={newProduct.quantity} 
-                    onChange={e => setNewProduct({...newProduct, quantity: parseInt(e.target.value) || 0})}
+                    onChange={e => setNewProduct({...newProduct, quantity: e.target.value})}
                     className="w-full bg-slate-50 border border-slate-100 p-4 rounded-2xl font-black text-sm outline-none focus:ring-2 focus:ring-blue-600 transition-all"
+                    placeholder="0"
                   />
                 </div>
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Minimo</label>
                   <input 
+                    required
                     type="number" 
                     value={newProduct.min_stock} 
-                    onChange={e => setNewProduct({...newProduct, min_stock: parseInt(e.target.value) || 0})}
+                    onChange={e => setNewProduct({...newProduct, min_stock: e.target.value})}
                     className="w-full bg-slate-50 border border-slate-100 p-4 rounded-2xl font-black text-sm outline-none focus:ring-2 focus:ring-blue-600 transition-all"
+                    placeholder="0"
                   />
                 </div>
               </div>

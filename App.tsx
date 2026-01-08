@@ -80,7 +80,10 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard': return <Dashboard onNavigateToOrdini={() => setActiveTab('ordini')} />;
+      case 'dashboard': 
+        return <Dashboard 
+          onNavigateToOrdini={() => setActiveTab('ordini')} 
+        />;
       case 'inventario': return <InventoryTable currentUser={currentUser} />;
       case 'movimenti': return <StockMovement currentUser={currentUser} />;
       case 'ordini': return <ReorderManagement currentUser={currentUser} />;
@@ -106,12 +109,16 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
-             <div className="hidden sm:flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
+             <button 
+               onClick={() => setActiveTab('profilo')}
+               className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100 hover:bg-slate-100 transition-colors"
+               title="Visualizza Profilo"
+             >
                 <div className="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-[9px] font-black">
                    {currentUser.role[0].toUpperCase()}
                 </div>
-                <span className="text-[10px] font-black text-slate-700 uppercase tracking-tighter">{currentUser.email.split('@')[0]}</span>
-             </div>
+                <span className="hidden sm:inline text-[10px] font-black text-slate-700 uppercase tracking-tighter">{currentUser.email.split('@')[0]}</span>
+             </button>
           </div>
         </header>
 

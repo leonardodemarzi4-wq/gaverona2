@@ -1,6 +1,6 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { WarehouseName, PurchaseOrder, Order } from '../types';
+import { WarehouseName, PurchaseOrder, Order, InventoryItem } from '../types';
 
 const supabaseUrl = 'https://your-project-url.supabase.co';
 const supabaseKey = 'your-anon-key';
@@ -11,28 +11,11 @@ export const isConfigured = !supabaseUrl.includes('your-project-url');
 
 const WAREHOUSES: WarehouseName[] = ['Principale', 'Nicola', 'Leonardo', 'Liborio', 'Marco', 'Mirko'];
 
-// Extended Mock Data for Demo
-const MOCK_INVENTORY: any[] = WAREHOUSES.flatMap((w, idx) => [
-  { id: `w${idx}-1`, name: 'Trapano Industriale X200', sku: 'DRL-001', quantity: 45, category: 'Attrezzatura', warehouse: w, updated_at: new Date().toISOString(), min_stock: 10 },
-  { id: `w${idx}-2`, name: 'Casco di Sicurezza L-Class', sku: 'SAF-012', quantity: 12, category: 'Sicurezza', warehouse: w, updated_at: new Date().toISOString(), min_stock: 15 },
-  { id: `w${idx}-3`, name: 'Cavo Rame 50m', sku: 'CAB-993', quantity: 120, category: 'Elettrico', warehouse: w, updated_at: new Date().toISOString(), min_stock: 50 },
-  { id: `w${idx}-4`, name: 'Liquido Idraulico 5L', sku: 'OIL-442', quantity: 8, category: 'Manutenzione', warehouse: w, updated_at: new Date().toISOString(), min_stock: 10 },
-]);
+// Inventario inizialmente vuoto come richiesto
+let MOCK_INVENTORY: InventoryItem[] = [];
 
-const MOCK_PURCHASE_ORDERS: PurchaseOrder[] = [
-  { 
-    id: 'PO-2024-001', 
-    items_count: 2, 
-    created_at: new Date(Date.now() - 86400000).toISOString(), 
-    status: 'sent',
-    items: [
-      { name: 'Cavo Rame 50m', sku: 'CAB-993', qty: 10, warehouse: 'Principale' },
-      { name: 'Liquido Idraulico 5L', sku: 'OIL-442', qty: 5, warehouse: 'Nicola' }
-    ]
-  }
-];
+const MOCK_PURCHASE_ORDERS: PurchaseOrder[] = [];
 
-// Added mock data for customer orders to resolve the error in components/Orders.tsx
 const MOCK_ORDERS: Order[] = [
   { id: 'ORD-001', customer: 'Impianti Nord srl', status: 'shipped', total: 1250.50, created_at: new Date().toISOString() },
   { id: 'ORD-002', customer: 'Edilizia Moderna', status: 'pending', total: 450.00, created_at: new Date().toISOString() },
@@ -46,7 +29,6 @@ export const mockApi = {
       : [...MOCK_INVENTORY];
     return { data, error: null };
   },
-  // Added getOrders method to resolve the error in components/Orders.tsx
   getOrders: async () => {
     await new Promise(r => setTimeout(r, 400));
     return { data: [...MOCK_ORDERS], error: null };
@@ -59,6 +41,21 @@ export const mockApi = {
     await new Promise(r => setTimeout(r, 500));
     MOCK_PURCHASE_ORDERS.unshift(order);
     return { data: order, error: null };
+  },
+  createItem: async (item: Partial<InventoryItem>) => {
+    await new Promise(r => setTimeout(r, 500));
+    const newItem: InventoryItem = {
+      id: `item-${Math.random().toString(36).substr(2, 9)}`,
+      name: item.name || 'Nuovo Prodotto',
+      sku: item.sku || 'SKU-TEMP',
+      quantity: item.quantity || 0,
+      category: item.category || 'Generale',
+      warehouse: item.warehouse || 'Principale',
+      updated_at: new Date().toISOString(),
+      min_stock: item.min_stock || 10
+    };
+    MOCK_INVENTORY.push(newItem);
+    return { data: newItem, error: null };
   },
   updateQuantity: async (itemId: string, newQuantity: number) => {
     await new Promise(r => setTimeout(r, 300));
